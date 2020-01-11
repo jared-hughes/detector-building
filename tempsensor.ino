@@ -1,38 +1,49 @@
 #define inPin A3
 #define HISTORY_LENGTH 50
-#define POLLING_DELAY 20  // ms
-#define MAX_READING 1024
+#define POLLING_INTERVAL 10  // ms
+#define MAX_READING 5000
 
 void setup() {
   Serial.begin(9600);
 }
 
+void tabPrint(String left, float content) {
+  Serial.print(left);
+  Serial.print(content);
+  Serial.print("\t");
+}
+
 void loop() {
   float total = 0;
-  int minimum = MAX_READING;
-  int maximum = 0;
+  float minimum = MAX_READING;
+  float maximum = 0;
+  float millivolts[HISTORY_LENGTH];
+  float raw, mv;
   for (int i = 0; i < HISTORY_LENGTH; i++) {
-    int raw = analogRead(inPin);
-    total += raw;
-    minimum = min(minimum, raw);
-    maximum = max(maximum, raw);
-    delay(POLLING_DELAY);
+    raw = analogRead(inPin);
+    mv = raw*5000/1024;
+    millivolts[i] = mv;
+    total += mv;
+    minimum = min(minimum, mv);
+    maximum = max(maximum, mv);
+    delay(POLLING_INTERVAL);
   }
 
-  float raw = total / HISTORY_LENGTH;
-  float mv = raw*5000/1024;
-  float temp = 0.103*mv-45.79;
+  float avg = total / HISTORY_LENGTH;
+  float temp = 0.103*avg-45.79;
 
-  Serial.print(minimum);
-  Serial.print("\t");
-  Serial.print(maximum);
-  Serial.print("\t");
-  Serial.print(raw);
-  Serial.print("\t");
-  Serial.print(mv);
-  Serial.print("\t");
-  Serial.print(temp);
+  float normN = 0;
+  for (int i = 0; i < HISTORY_LENGTH; i++) {
+    normN += (millivolts[i] - avg) * (millivolts[i] - avg);
+  }
+  float stdev = sqrt(normN / HISTORY_LENGTH);
+
+  tabPrint("min mV= ", minimum);
+  tabPrint("max mV= ", maximum);
+  tabPrint("avg mV= ", avg);
+  tabPrint("stdev mV= ", stdev);
+  tabPrint("temp *C= ", temp);
   Serial.println();
   
-  delay(400);
+  delay(100);
 }
