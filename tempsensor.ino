@@ -14,16 +14,6 @@ void setup() {
   pinMode(bluePin, OUTPUT);
 }
 
-void color(bool r, bool g, bool b) {
-  digitalWrite(redPin, r);
-  digitalWrite(greenPin, g);
-  digitalWrite(bluePin, b);
-}
-
-void red() {color(HIGH, LOW, LOW);}
-void green() {color(LOW, HIGH, LOW);}
-void blue() {color(LOW, LOW, HIGH);}
-
 void tabPrint(String left, float content) {
   Serial.print(left);
   Serial.print(content);
@@ -47,30 +37,48 @@ void loop() {
   }
 
   float avg = total / HISTORY_LENGTH;
-  float temp = 0.103*avg-45.79;
+  float temp = 0.1156*avg-56.80;
+  
+  doColor(temp);
 
   float normN = 0;
   for (int i = 0; i < HISTORY_LENGTH; i++) {
     normN += (millivolts[i] - avg) * (millivolts[i] - avg);
   }
+
+  // high by 1 at low temps, low by 1 at high temps
   float stdev = sqrt(normN / HISTORY_LENGTH);
   
-  if (temp < 18) {
-    blue();
-  }
-  if (18 < temp && temp < 20) {
-    green();
-  }
-  if (temp > 20) {
-    color(HIGH, LOW, HIGH);
-  }
+  doColor(temp);
 
   tabPrint("min mV= ", minimum);
   tabPrint("max mV= ", maximum);
-  tabPrint("avg mV= ", avg);
   tabPrint("stdev mV= ", stdev);
+  tabPrint("avg mV= ", avg);
   tabPrint("temp *C= ", temp);
   Serial.println();
   
   delay(100);
+}
+
+void red(bool status) {
+  digitalWrite(redPin, status)
+}
+
+void green(bool status) {
+  digitalWrite(greenPin, status)
+}
+
+void blue(bool status) {
+  digitalWrite(bluePin, status)
+}
+
+void in(float x, float a, float b) {
+  return a < x && x < b;
+}
+
+void doColor(float temp) {
+  green(in(temp, 5, 35));
+  red(in(temp, 25, 40));
+  blue(in(temp, 50, 60));
 }
