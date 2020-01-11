@@ -2,10 +2,27 @@
 #define HISTORY_LENGTH 50
 #define POLLING_INTERVAL 10  // ms
 #define MAX_READING 5000
+#define redPin 4
+#define greenPin 5
+#define bluePin 6
 
 void setup() {
   Serial.begin(9600);
+  pinMode(inPin, INPUT);
+  pinMode(redPin, OUTPUT);
+  pinMode(greenPin, OUTPUT);
+  pinMode(bluePin, OUTPUT);
 }
+
+void color(bool r, bool g, bool b) {
+  digitalWrite(redPin, r);
+  digitalWrite(greenPin, g);
+  digitalWrite(bluePin, b);
+}
+
+void red() {color(HIGH, LOW, LOW);}
+void green() {color(LOW, HIGH, LOW);}
+void blue() {color(LOW, LOW, HIGH);}
 
 void tabPrint(String left, float content) {
   Serial.print(left);
@@ -37,6 +54,16 @@ void loop() {
     normN += (millivolts[i] - avg) * (millivolts[i] - avg);
   }
   float stdev = sqrt(normN / HISTORY_LENGTH);
+  
+  if (temp < 18) {
+    blue();
+  }
+  if (18 < temp && temp < 20) {
+    green();
+  }
+  if (temp > 20) {
+    color(HIGH, LOW, HIGH);
+  }
 
   tabPrint("min mV= ", minimum);
   tabPrint("max mV= ", maximum);
