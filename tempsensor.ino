@@ -5,6 +5,7 @@
 #define redPin 4
 #define greenPin 5
 #define bluePin 6
+#define plotterMode true
 
 void setup() {
   Serial.begin(9600);
@@ -15,7 +16,6 @@ void setup() {
 }
 
 void tabPrint(String left, float content) {
-  Serial.print(left);
   Serial.print(content);
   Serial.print("\t");
 }
@@ -37,7 +37,7 @@ void loop() {
   }
 
   float avg = total / HISTORY_LENGTH;
-  float temp = 0.1156*avg-56.80;
+  float temp = 0.100192*avg-45.1788;
   
   doColor(temp);
 
@@ -51,29 +51,37 @@ void loop() {
   
   doColor(temp);
 
-  tabPrint("min mV= ", minimum);
-  tabPrint("max mV= ", maximum);
-  tabPrint("stdev mV= ", stdev);
-  tabPrint("avg mV= ", avg);
-  tabPrint("temp *C= ", temp);
+  if (plotterMode) {
+    Serial.print(avg);
+    Serial.print("\t");
+    Serial.print(temp);
+    Serial.print("\t");
+    Serial.println();
+  } else {
+    tabPrint("min mV= ", minimum);
+    tabPrint("max mV= ", maximum);
+    tabPrint("stdev mV= ", stdev);
+    tabPrint("avg mV= ", avg);
+    tabPrint("temp *C= ", temp);
+  }
   Serial.println();
   
   delay(100);
 }
 
 void red(bool status) {
-  digitalWrite(redPin, status)
+  digitalWrite(redPin, status);
 }
 
 void green(bool status) {
-  digitalWrite(greenPin, status)
+  digitalWrite(greenPin, status);
 }
 
 void blue(bool status) {
-  digitalWrite(bluePin, status)
+  digitalWrite(bluePin, status);
 }
 
-void in(float x, float a, float b) {
+bool in(float x, float a, float b) {
   return a < x && x < b;
 }
 
