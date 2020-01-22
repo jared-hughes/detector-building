@@ -1,7 +1,5 @@
 #define inPin A3
-#define HISTORY_LENGTH 50
-#define POLLING_INTERVAL 10  // ms
-#define MAX_READING 5000
+#define POLLING_INTERVAL 100  // ms
 #define redPin 4
 #define greenPin 5
 #define bluePin 6
@@ -16,57 +14,77 @@ void setup() {
 }
 
 void tabPrint(String left, float content) {
+  // ignore funky data from first second
+  if (millis() < 1000) {
+    return;
+  }
+  if (!plotterMode) {
+    Serial.print(left);
+  }
   Serial.print(content);
   Serial.print("\t");
 }
 
+// https://www.kalmanfilter.net/kalman1d.html
+// current variables are initial estimates
+float x;
+float v = 0;
+// initial x estimate, can be imprecise
+float x_pred = 750;
+float v_pred = 0;
+// variance of initial estimate
+float estimate_cov = 25000;
+float last_time = 0;
+float addKalmanMeasurement(float this_time, float measurement) {
+  float dt = this_time - last_time;
+  // avoid dt=0 on first update; no dt should be < POLLING_INTERVAL/10 in normal operation
+  if (dt < POLLING_INTERVAL / 10) {
+      dt = POLLING_INTERVAL;
+  }
+  last_time = this_time;
+  // CALIB
+  // assume same variance for each measurement
+  float measurement_cov = 197;
+  // 3. Kalman Gain
+  float kalman_gain = estimate_cov / (estimate_cov + measurement_cov);
+  // 1. State Update
+  x = (1-kalman_gain) * x_pred + kalman_gain * measurement;
+  v = v_pred + kalman_gain * (measurement - x_pred) / dt;
+  // 2. State Extrapolation
+  x_pred = x + dt * v;
+  v_pred = 0;
+  // 4. Covariance Update
+  float cov = (1-kalman_gain) * estimate_cov;
+  // 5. Covariance Extrapolation
+  // process noise
+  float q = 0.1;
+  estimate_cov = cov + q;
+
+  return x;
+}
+
+
 void loop() {
-  float total = 0;
-  float minimum = MAX_READING;
-  float maximum = 0;
-  float millivolts[HISTORY_LENGTH];
-  float raw, mv;
-  for (int i = 0; i < HISTORY_LENGTH; i++) {
-    raw = analogRead(inPin);
-    mv = raw*5000/1024;
-    millivolts[i] = mv;
-    total += mv;
-    minimum = min(minimum, mv);
-    maximum = max(maximum, mv);
-    delay(POLLING_INTERVAL);
-  }
+  float t = millis();
+  float raw = analogRead(inPin);
+  float raw_mv = raw*5000/1024;
 
-  float avg = total / HISTORY_LENGTH;
-  float temp = 0.100192*avg-45.1788;
-  
+  tabPrint("time= ", t);
+  tabPrint("raw mV= ", raw_mv);
+
+  float kalman_mv = addKalmanMeasurement(t, raw_mv);
+
+  float temp = 0.100192*kalman_mv-45.1788;
+
   doColor(temp);
 
-  float normN = 0;
-  for (int i = 0; i < HISTORY_LENGTH; i++) {
-    normN += (millivolts[i] - avg) * (millivolts[i] - avg);
-  }
-
-  // high by 1 at low temps, low by 1 at high temps
-  float stdev = sqrt(normN / HISTORY_LENGTH);
-  
-  doColor(temp);
-
-  if (plotterMode) {
-    Serial.print(avg);
-    Serial.print("\t");
-    Serial.print(temp);
-    Serial.print("\t");
-    Serial.println();
-  } else {
-    tabPrint("min mV= ", minimum);
-    tabPrint("max mV= ", maximum);
-    tabPrint("stdev mV= ", stdev);
-    tabPrint("avg mV= ", avg);
-    tabPrint("temp *C= ", temp);
-  }
+  tabPrint("avg mV= ", kalman_mv);
+  tabPrint("temp *C= ", temp);
+  tabPrint("mV pred= ", x_pred);
+  tabPrint("var= ", estimate_cov);
   Serial.println();
-  
-  delay(100);
+
+  delay(POLLING_INTERVAL);
 }
 
 void red(bool status) {
