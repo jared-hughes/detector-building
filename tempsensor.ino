@@ -35,6 +35,7 @@ float v_pred = 0;
 // variance of initial estimate
 float estimate_cov = 25000;
 float last_time = 0;
+float beta = 0.05;
 float addKalmanMeasurement(float this_time, float measurement) {
   float dt = this_time - last_time;
   // avoid dt=0 on first update; no dt should be < POLLING_INTERVAL/10 in normal operation
@@ -49,7 +50,7 @@ float addKalmanMeasurement(float this_time, float measurement) {
   float kalman_gain = estimate_cov / (estimate_cov + measurement_cov);
   // 1. State Update
   x = (1-kalman_gain) * x_pred + kalman_gain * measurement;
-  v = v_pred + kalman_gain * (measurement - x_pred) / dt;
+  v = v_pred + beta * (measurement - x_pred) / dt;
   // 2. State Extrapolation
   x_pred = x + dt * v;
   v_pred = 0;
@@ -69,7 +70,6 @@ void loop() {
   float raw = analogRead(inPin);
   float raw_mv = raw*5000/1024;
 
-  tabPrint("time= ", t);
   tabPrint("raw mV= ", raw_mv);
 
   float kalman_mv = addKalmanMeasurement(t, raw_mv);
