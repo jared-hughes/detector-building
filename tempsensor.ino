@@ -1,9 +1,12 @@
+#include <QueueList.h>
+
 #define inPin A3
 #define POLLING_INTERVAL 100  // ms
 #define redPin 4
 #define greenPin 5
 #define bluePin 6
 #define plotterMode true
+#define MEASURE_HIST_LENGTH 50
 
 void setup() {
   Serial.begin(9600);
@@ -35,7 +38,7 @@ float v_pred = 0;
 // variance of initial estimate
 float estimate_cov = 25000;
 float last_time = 0;
-float beta = 0.05;
+float beta = 0;
 float addKalmanMeasurement(float this_time, float measurement) {
   float dt = this_time - last_time;
   // avoid dt=0 on first update; no dt should be < POLLING_INTERVAL/10 in normal operation
@@ -50,7 +53,7 @@ float addKalmanMeasurement(float this_time, float measurement) {
   float kalman_gain = estimate_cov / (estimate_cov + measurement_cov);
   // 1. State Update
   x = (1-kalman_gain) * x_pred + kalman_gain * measurement;
-  v = v_pred + beta * (measurement - x_pred) / dt;
+  v = (1-beta) * v_pred + beta * (measurement - x_pred) / dt;
   // 2. State Extrapolation
   x_pred = x + dt * v;
   v_pred = 0;
@@ -64,7 +67,8 @@ float addKalmanMeasurement(float this_time, float measurement) {
   return x;
 }
 
-
+float naive_total = 0;
+QueueList<float> measure_hist;
 void loop() {
   float t = millis();
   float raw = analogRead(inPin);
@@ -73,6 +77,13 @@ void loop() {
   tabPrint("raw mV= ", raw_mv);
 
   float kalman_mv = addKalmanMeasurement(t, raw_mv);
+  naive_total += raw_mv;
+  measure_hist.push(raw_mv);
+  if (measure_hist.count() > MEASURE_HIST_LENGTH) {
+    naive_total -= measure_hist.peek();
+    measure_hist.pop();
+  }
+  tabPrint("naive mV= ", naive_total / measure_hist.count());
 
   float temp = 0.100192*kalman_mv-45.1788;
 
