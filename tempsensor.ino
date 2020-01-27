@@ -74,7 +74,7 @@ void loop() {
   float raw = analogRead(inPin);
   float raw_mv = raw*5000/1024;
 
-  tabPrint("raw mV= ", raw_mv);
+  tabPrint("raw dV= ", raw_mv/100);
 
   float kalman_mv = addKalmanMeasurement(t, raw_mv);
   naive_total += raw_mv;
@@ -83,16 +83,16 @@ void loop() {
     naive_total -= measure_hist.peek();
     measure_hist.pop();
   }
-  tabPrint("naive mV= ", naive_total / measure_hist.count());
+  tabPrint("naive dV= ", naive_total / measure_hist.count() / 100);
 
-  float temp = 0.100192*kalman_mv-45.1788;
+  float temp = 0.09406*kalman_mv-42.69;
 
   doColor(temp);
 
-  tabPrint("avg mV= ", kalman_mv);
+  tabPrint("avg dV= ", kalman_mv/100);
   tabPrint("temp *C= ", temp);
-  tabPrint("mV pred= ", x_pred);
-  tabPrint("var= ", estimate_cov);
+  // tabPrint("dV pred= ", x_pred/100);
+  tabPrint("var (mV^2)= ", estimate_cov);
   Serial.println();
 
   delay(POLLING_INTERVAL);
