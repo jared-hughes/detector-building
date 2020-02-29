@@ -85,7 +85,7 @@ void loop() {
   }
   tabPrint("naive dV= ", naive_total / measure_hist.count() / 100);
 
-  float temp = 0.09406*kalman_mv-42.69;
+  float temp = 0.1029*kalman_mv-45.18;
 
   doColor(temp);
 
@@ -110,12 +110,34 @@ void blue(bool status) {
   digitalWrite(bluePin, status);
 }
 
-bool in(float x, float a, float b) {
+void rgb(bool r, bool g, bool b) {
+  red(r);
+  green(g);
+  blue(b);
+}
+
+bool isIn(float x, float a, float b) {
   return a < x && x < b;
 }
 
+struct Pair {
+  float x;
+  float y;
+
+  Pair(float x, float y) {
+    this->x = x;
+    this->y = y;
+  }
+
+  friend float operator^(float a, Pair b) {
+    return isIn(a, b.x, b.y);
+  }
+};
+
+#define in ^ Pair
+
 void doColor(float temp) {
-  green(in(temp, 5, 35));
-  red(in(temp, 25, 40));
-  blue(in(temp, 50, 60));
+  red(temp in (5,20));
+  green(temp in (25, 40));
+  blue(temp in (45, 90));
 }
